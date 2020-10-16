@@ -1,0 +1,541 @@
+---
+title: "Daily Weights Data Cleaning"
+hitheme: tomorrow
+output:
+  html_document:
+    code_folding: hide
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+highlighter: highlight.js
+---
+
+# Loading Data and Cleaning
+
+
+```{r setup, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(here)
+library(skimr)
+library(lubridate)
+library(data.table)
+library(zoo)
+library(ggpubr)
+
+knitr::opts_chunk$set(echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 8,
+  fig.height = 6
+)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+
+# load daily weights
+weights <- read_csv(here("Body_Trace_Weights_C1-C3_4.20.20.csv"), col_types = "ccdd") %>% clean_names()
+
+# load participant ids
+excel_sheets(here::here("17-0369_Body_Trace_Scale_Assignment.xlsx"))
+
+cohort1 = read_excel(here::here("17-0369_Body_Trace_Scale_Assignment.xlsx"), 
+           sheet = "C1") %>%
+  clean_names()
+
+cohort1_errors = read_excel(here::here("17-0369_Body_Trace_Scale_Assignment.xlsx"), 
+           sheet = "C1 Errors") %>%
+  clean_names()
+
+cohort2 = read_excel(here::here("17-0369_Body_Trace_Scale_Assignment.xlsx"), 
+           sheet = "C2") %>%
+  clean_names()
+
+cohort3 = read_excel(here::here("17-0369_Body_Trace_Scale_Assignment.xlsx"), 
+           sheet = "C3") %>%
+  clean_names()
+
+cohort1 = cohort1 %>% 
+  mutate(cohort = 1) %>%
+  select(participant_id, imei, cohort, scale_id)
+
+cohort2 = cohort2 %>% 
+  mutate(cohort = 2) %>%
+  select(participant_id, imei, cohort)
+
+cohort3 = cohort3 %>% 
+  mutate(cohort = 3) %>%
+  select(participant_id, imei, cohort)
+
+cohorts <- full_join(cohort1, cohort2) %>% full_join(.,cohort3)
+weights = left_join(weights, cohorts)
+weights$cohort <- factor(weights$cohort, c("1", "2", "3"))
+
+#removing staff data
+weights = weights %>% filter(!participant_id =="DRIFT2 Staff")
+
+# Removing early withdrawal patient 
+
+weights = weights %>% filter(!participant_id =="CWE-124")
+
+# Combining new and old weights for participants 
+weights$participant_id = str_sub(weights$participant_id, 1, 7)
+
+#creating weight variable in pounds
+weights = weights %>% mutate(wt_lb=wt_kg*2.2046226218)
+
+## Switching the weights from spouses JUT-032 and KCE-034 when they were using each other's scales. 
+
+weights = weights %>% mutate(participant_id=
+    case_when(
+      participant_id=="JUT-032" & wt_lb > 215 ~ "JUT-032",
+      participant_id=="JUT-032" & wt_lb <=215 ~ "KCE-034",
+      participant_id=="JUT-032" & wt_lb == NA  ~ "JUT-032",
+      !participant_id=="JUT-032" ~ participant_id,
+      TRUE ~ participant_id,
+        ))
+
+weights = weights %>% mutate(participant_id=
+    case_when(
+      participant_id=="KCE-034" & wt_lb < 215 ~ "KCE-034",
+      participant_id=="KCE-034" & wt_lb >=215 ~ "JUT-032",
+      participant_id=="KCE-034" & wt_lb == NA  ~ "KCE-034",
+      !participant_id=="KCE-034" ~ participant_id,
+      TRUE ~ participant_id,
+))
+
+## Combining weights from YOL-103 into YOR-103 
+
+weights = weights %>% mutate(participant_id=
+  case_when(
+    participant_id== "YOL-103" ~ "YOR-103",
+    participant_id!= "YOL-103" ~ participant_id,
+    TRUE ~ participant_id,
+  ))
+
+
+weights$date_time_of_wt <- mdy_hm(weights$date_time_of_wt)
+#grabing just the date without time
+split_dates <- str_split_fixed(weights$date_time_of_wt, " ", 2)
+weights$weight_dates <- split_dates[,1] %>% ymd()
+
+#study days variable
+weights = weights %>% mutate(weight_date_numeric = as.numeric(weight_dates), weighed_in = "yes") %>% group_by(participant_id)%>% mutate(study_days = (weight_date_numeric - min(weight_date_numeric)) + 1, observation_days = max(study_days)) %>% ungroup()
+
+## Removing weight observations past day 600 
+
+weights = weights %>% mutate(study_days_outliers = if_else(study_days<=600, 1, 0)) %>% filter(study_days_outliers=="1") %>% select(-(study_days_outliers))
+
+## splitting up study days into fourths 
+weights <-weights %>% group_by(participant_id) %>% 
+  mutate(study_time=(max(weight_dates) -min(weight_dates))) %>% 
+  mutate(q1=min(weight_dates)+study_time*(1/4)) %>% 
+  mutate(q2=min(weight_dates)+study_time*(2/4)) %>% 
+  mutate(q3=min(weight_dates)+study_time*(3/4)) %>% 
+  mutate(q4=max(weight_dates)) %>% 
+  mutate(period=if_else(weight_dates<q1, 1, if_else(weight_dates>=q1 & weight_dates<q2, 2,
+    if_else(weight_dates>=q2 & weight_dates<q3, 3, 
+    if_else(weight_dates>=q3 & weight_dates<=q4,4,0))))) %>% ungroup() 
+weights <- weights %>% select(imei, date_time_of_wt, wt_kg, tare_kg, 
+        participant_id,cohort, scale_id, weight_dates, wt_lb, period, weight_dates, study_days) %>% ungroup()
+weights$period <- factor(weights$period, levels = (c("1", "2", "3", "4"))) 
+
+## Adding weight dates variable, weight_dates_join to join with drift sets 
+
+weights$weight_dates_join = weights$weight_dates
+
+
+## Loading Drift2 Database 
+
+data <- read_csv(here("DRIFT2Database-AllWeightsInC1C3AsOf_DATA_2020-06-09_1016.csv")) %>% clean_names()
+data$initials = na.locf(data$initials)
+
+## Modifying record ID then attaching it to initials
+
+data$record_id = str_pad(data$record_id, 3, "left", "0")
+data$participant_id = paste(data$initials, data$record_id, sep="-")
+
+data = data %>% mutate(participant_id=
+  case_when(
+    participant_id== "rVCA-041" ~ "VCA-041",
+    participant_id!= "VCA-041" ~ participant_id,
+    TRUE ~ participant_id,
+  ))
+
+## Grabbing weight values and dates for the classes and merging them into two columns using a gather and melt function. 
+
+data_class_weights <- data %>% select(participant_id, cohort_number, redcap_event_name, class_wt_wk0, class_wt_wk1,class_wt_wk2,class_wt_wk3,class_wt_wk4,class_wt_wk5,class_wt_wk6,class_wt_wk7,class_wt_wk8,class_wt_wk9,class_wt_wk10,class_wt_wk11,class_wt_wk12,class_wt_wk13,class_wt_wk14,class_wt_wk15,class_wt_wk16,class_wt_wk18,class_wt_wk20,class_wt_wk22,class_wt_wk24,class_wt_wk26,class_wt_wk28,class_wt_wk30,class_wt_wk32,class_wt_wk34,class_wt_wk36,class_wt_wk38,class_wt_wk40,class_wt_wk42,class_wt_wk44,class_wt_wk46,class_wt_wk48,class_wt_wk50,class_wt_wk52, class_dt_wk0, class_dt_wk1, class_dt_wk2, class_dt_wk3,class_dt_wk4,class_dt_wk5,class_dt_wk6,class_dt_wk7,class_dt_wk8,class_dt_wk9,class_dt_wk10,class_dt_wk11,class_dt_wk12,class_dt_wk13,class_dt_wk14,class_dt_wk15,class_dt_wk16,class_dt_wk18,class_dt_wk20,class_dt_wk22,class_dt_wk24,class_dt_wk26,class_dt_wk28,class_dt_wk30,class_dt_wk32,class_dt_wk34,class_dt_wk36,class_dt_wk38,class_dt_wk40,class_dt_wk42,class_dt_wk44,class_dt_wk46,class_dt_wk48,class_dt_wk50,class_dt_wk52)
+
+data_class_weights= data_class_weights %>% filter(redcap_event_name=="screening_arm_1")
+
+data_class_weights <- melt(setDT(data_class_weights), measure = patterns("^class_wt_wk", "^class_dt_wk"), value.name = c("weight_lb_class", "weight_dates_class"))
+
+data_class_weights= data_class_weights%>% select(participant_id, cohort_number, weight_lb_class, weight_dates_class)
+data_class_weights = as_tibble(data_class_weights)
+data_class_weights$weight_dates_class = mdy(data_class_weights$weight_dates_class)
+#duplicating dates to join and classify all weights into same period
+data_class_weights$weight_dates_join = data_class_weights$weight_dates_class
+#duplicating weights into a research weights column to be joined with outcomes 
+data_class_weights$research_weights = data_class_weights$weight_lb_class
+
+## Grabbing bluetooth weights and dates and merging them into two columns using a gather and melt function. 
+
+data_class_weights_bt <- data %>% select(participant_id, cohort_number, redcap_event_name, class_wt_wk0_bt, class_wt_wk1_bt,class_wt_wk2_bt,class_wt_wk3_bt,class_wt_wk4_bt,class_wt_wk5_bt,class_wt_wk6_bt,class_wt_wk7_bt,class_wt_wk8_bt,class_wt_wk9_bt,class_wt_wk10_bt,class_wt_wk11_bt,class_wt_wk12_bt,class_wt_wk13_bt,class_wt_wk14_bt,class_wt_wk15_bt,class_wt_wk16_bt,class_wt_wk18_bt,class_wt_wk20_bt,class_wt_wk22_bt,class_wt_wk24_bt,class_wt_wk26_bt,class_wt_wk28_bt,class_wt_wk30_bt,class_wt_wk32_bt,class_wt_wk34_bt,class_wt_wk36_bt,class_wt_wk38_bt,class_wt_wk40_bt,class_wt_wk42_bt,class_wt_wk44_bt,class_wt_wk46_bt,class_wt_wk48_bt,class_wt_wk50_bt,class_wt_wk52_bt, class_dt_wk0_bt, class_dt_wk1_bt, class_dt_wk2_bt, class_dt_wk3_bt,class_dt_wk4_bt,class_dt_wk5_bt,class_dt_wk6_bt,class_dt_wk7_bt,class_dt_wk8_bt,class_dt_wk9_bt,class_dt_wk10_bt,class_dt_wk11_bt,class_dt_wk12_bt,class_dt_wk13_bt,class_dt_wk14_bt,class_dt_wk15_bt,class_dt_wk16_bt,class_dt_wk18_bt,class_dt_wk20_bt,class_dt_wk22_bt,class_dt_wk24_bt,class_dt_wk26_bt,class_dt_wk28_bt,class_dt_wk30_bt,class_dt_wk32_bt,class_dt_wk34_bt,class_dt_wk36_bt,class_dt_wk38_bt,class_dt_wk40_bt,class_dt_wk42_bt,class_dt_wk44_bt,class_dt_wk46_bt,class_dt_wk48_bt,class_dt_wk50_bt,class_dt_wk52_bt)
+
+data_class_weights_bt= data_class_weights_bt %>% filter(redcap_event_name=="screening_arm_1")
+
+data_class_weights_bt <- melt(setDT(data_class_weights_bt), measure = patterns("^class_wt_wk", "^class_dt_wk"), value.name = c("weight_lb_class_bt", "weight_dates_class_bt"))
+
+data_class_weights_bt = data_class_weights_bt %>% select(participant_id, cohort_number, weight_lb_class_bt, weight_dates_class_bt)
+data_class_weights_bt = as_tibble(data_class_weights_bt)
+data_class_weights_bt$weight_dates_class_bt = mdy(data_class_weights_bt$weight_dates_class_bt)
+data_class_weights_bt$weight_dates_join = data_class_weights_bt$weight_dates_class_bt
+
+
+## data set for the withdraw dates 
+
+data_withdraw = data %>% filter(redcap_event_name=="screening_arm_1") %>%  select(participant_id, withdrawal_date, withdrawal_wt_lbs, withdrawal_wt_date )
+data_withdraw$withdrawal_wt_date = mdy(data_withdraw$withdrawal_wt_date)
+data_withdraw$withdrawal_date = mdy(data_withdraw$withdrawal_date)
+data_withdraw = data_withdraw %>% group_by(participant_id) %>% mutate(participant_id_numbered=paste(participant_id, (seq(1:length(participant_id)))+2000)) %>% ungroup()
+data_withdraw$weight_dates_join = data_withdraw$withdrawal_date
+data_withdraw$weight_dates = data_withdraw$withdrawal_date
+## The reason for adding the withdrawal dates into the weight_dates column is so that during analysis, when trying to find the number of weigh-in observations per month, the proper denominator can be used. Leaving in withdrawal participants in the initial months and removing them from the denominator after having withdrawn. 
+
+## data set for the outcome weights and outcome weight dates 
+
+data_weight_outcomes = data %>%  select(participant_id,record_id, outcome_wt_date, outcome_avg_wt_lbs)
+data_weight_outcomes$outcome_wt_date = mdy(data_weight_outcomes$outcome_wt_date)
+data_weight_outcomes = data_weight_outcomes %>% group_by(record_id) %>% mutate(participant_id_numbered=paste(participant_id, (seq(1:length(participant_id)))+3000)) %>% ungroup()
+#duplicating weights to research weights to be combined with class weights 
+data_weight_outcomes$research_weights = data_weight_outcomes$outcome_avg_wt_lbs
+
+#correcting participant EJO-092 outcome weight date: improperly put in as 2014 instead of 2019 
+
+data_weight_outcomes = data_weight_outcomes %>% mutate(outcome_wt_date = 
+        case_when(
+          outcome_wt_date == "2014-10-22" ~ as.Date("2019-10-22"),
+          TRUE ~ outcome_wt_date,
+        ))
+
+
+data_weight_outcomes$weight_dates_join = data_weight_outcomes$outcome_wt_date
+
+
+## creating a new variable, participant_id_numbered, to attempt to join data sets without duplicates
+
+weights = weights %>% group_by(participant_id) %>% mutate(participant_id_numbered=paste(participant_id, seq(1:length(participant_id)))) %>% ungroup()
+
+data_class_weights = data_class_weights %>% group_by(participant_id) %>% mutate(participant_id_numbered=paste(participant_id, (seq(1:length(participant_id)))+500)) %>% ungroup()
+
+data_class_weights_bt = data_class_weights_bt %>% group_by(participant_id) %>% mutate(participant_id_numbered=paste(participant_id, (seq(1:length(participant_id)))+1000)) %>% ungroup()
+
+## Joining the blue tooth weights, the class weights, and the daily weights data. 
+
+daily_drift_data = full_join(weights, data_class_weights_bt) %>% full_join(.,data_class_weights) %>% full_join(.,data_withdraw) %>% full_join(.,data_weight_outcomes)
+daily_drift_data = daily_drift_data %>% select(-participant_id_numbered)
+
+## Filling in the missing cohort values that came from joining data frames without that variable
+
+daily_drift_data = daily_drift_data %>% group_by(participant_id) %>% fill(cohort) %>% ungroup()
+```
+
+## Creating a withdrawal variable 
+
+```{r}
+daily_drift_data = daily_drift_data %>% group_by(participant_id) %>% mutate(withdrawal =
+        case_when(
+          (mean(withdrawal_date, na.rm=TRUE)) > as.Date(01-01-2000) ~1,
+           TRUE~0,
+          )) %>% ungroup()
+
+#could remove outliers from one data set, but for now will just have to use filter(withdrawal=="0") in any line of code where no withdrawal participants should be there 
+#daily_drift_data_rmo = daily_drift_data_rmo %>% filter(withdrawal=="0")
+
+#practice = practice %>% group_by(participant_id) %>%  mutate(study_length = max(withdrawal_date, na.rm=TRUE) - min(weight_dates, na.rm=TRUE)) %>% mutate(withdrawal_removal =      case_when(
+#        study_length > 0 & study_length < 200 ~ 1,
+#        TRUE ~0
+#      ))
+#practice = practice %>% filter(withdrawal_removal=="0")
+ 
+```                                                                                     
+
+## 30 day period of study days (weights from the bluetooth scales)
+```{r}
+daily_drift_data = daily_drift_data %>% group_by(participant_id) %>% 
+  mutate(m1=as.numeric(min(weight_dates, na.rm = TRUE) + 29)) %>% 
+  mutate(m2=as.numeric(min(weight_dates, na.rm = TRUE) + 59)) %>% 
+  mutate(m3=as.numeric(min(weight_dates, na.rm = TRUE) + 89)) %>%  
+  mutate(m4=as.numeric(min(weight_dates, na.rm = TRUE) + 119)) %>% 
+  mutate(m5=as.numeric(min(weight_dates, na.rm = TRUE) + 149)) %>% 
+  mutate(m6=as.numeric(min(weight_dates, na.rm = TRUE) + 179)) %>% 
+  mutate(m7=as.numeric(min(weight_dates, na.rm = TRUE) + 209)) %>% 
+  mutate(m8=as.numeric(min(weight_dates, na.rm = TRUE) + 239)) %>% 
+  mutate(m9=as.numeric(min(weight_dates, na.rm = TRUE) + 269)) %>% 
+  mutate(m10=as.numeric(min(weight_dates, na.rm = TRUE) + 299)) %>% 
+  mutate(mrem=as.numeric(min(weight_dates, na.rm = TRUE) + 10000)) %>% 
+  ungroup()
+
+## Creating a new variable putting dates into 30 day periods in both weight dates (daily weights data) and class dates (redcap data)
+
+
+daily_drift_data = daily_drift_data %>% group_by(participant_id) %>% mutate(period_30=
+  case_when(
+    as.numeric(weight_dates) <=m1 ~ 1,
+    as.numeric(weight_dates)<=m2  ~ 2,
+    as.numeric(weight_dates)<=m3  ~ 3,
+    as.numeric(weight_dates)<=m4  ~ 4,
+    as.numeric(weight_dates)<=m5 ~ 5,
+    as.numeric(weight_dates)<=m6 ~ 6,
+    as.numeric(weight_dates)<=m7  ~ 7,
+    as.numeric(weight_dates)<=m8  ~ 8,
+    as.numeric(weight_dates)<=m9 ~ 9,
+    as.numeric(weight_dates)<=m10  ~ 10,
+    as.numeric(weight_dates)<=mrem  ~ 11, 
+  )) %>%  ungroup()
+
+```
+
+## Removing unneeded variables from data set 
+```{r}
+daily_drift_data = daily_drift_data %>% select("imei", "participant_id", "weight_dates", "weight_dates_class_bt", "weight_dates_class", "withdrawal_wt_date", "withdrawal_date", "outcome_wt_date", "cohort", "period", "wt_kg", "wt_lb", "study_days", "weight_lb_class_bt", "weight_lb_class", "withdrawal_wt_lbs", "outcome_avg_wt_lbs", "weight_dates_join", "research_weights", "withdrawal", "period_30", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "mrem")
+```
+
+```{r}
+## Data Manipulation with cohorts 1 and 2 
+
+data_cohorts_1_2 = daily_drift_data %>% filter(cohort %in% c("1", "2"))
+
+
+```
+
+
+## Periods for outliers: 15 day (8 periods) / 30 day
+
+
+```{r}
+
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id) %>% 
+  mutate(p1=as.numeric(min(weight_dates_join, na.rm = TRUE) + 14)) %>% 
+  mutate(p2=as.numeric(min(weight_dates_join, na.rm = TRUE) + 29)) %>% 
+  mutate(p3=as.numeric(min(weight_dates_join, na.rm = TRUE) + 44)) %>%  
+  mutate(p4=as.numeric(min(weight_dates_join, na.rm = TRUE) + 59)) %>% 
+  mutate(p5=as.numeric(min(weight_dates_join, na.rm = TRUE) + 74)) %>% 
+  mutate(p6=as.numeric(min(weight_dates_join, na.rm = TRUE) + 89)) %>% 
+  mutate(p7=as.numeric(min(weight_dates_join, na.rm = TRUE) + 104)) %>% 
+  mutate(p8=as.numeric(min(weight_dates_join, na.rm = TRUE) + 119)) %>% 
+  mutate(p9=as.numeric(min(weight_dates_join, na.rm = TRUE) + 149)) %>% 
+  mutate(p10=as.numeric(min(weight_dates_join, na.rm = TRUE) + 179)) %>% 
+  mutate(p11=as.numeric(min(weight_dates_join, na.rm = TRUE) + 209)) %>% 
+  mutate(p12=as.numeric(min(weight_dates_join, na.rm = TRUE) + 239)) %>% 
+  mutate(p13=as.numeric(min(weight_dates_join, na.rm = TRUE) + 269)) %>% 
+  mutate(p14=as.numeric(min(weight_dates_join, na.rm = TRUE) + 299)) %>% 
+  mutate(p15=as.numeric(min(weight_dates_join, na.rm = TRUE) + 329)) %>% 
+  mutate(p16=as.numeric(min(weight_dates_join, na.rm = TRUE) + 359)) %>% 
+  mutate(prem=as.numeric(min(weight_dates_join, na.rm = TRUE) + 1000)) %>%
+   ungroup()
+
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id) %>% mutate(outlier_periods =
+  case_when(
+    as.numeric(weight_dates_join) <=p1 ~ 1,
+    as.numeric(weight_dates_join)<=p2  ~ 2,
+    as.numeric(weight_dates_join)<=p3  ~ 3,
+    as.numeric(weight_dates_join)<=p4  ~ 4,
+    as.numeric(weight_dates_join)<=p5 ~ 5,
+    as.numeric(weight_dates_join)<=p6 ~ 6,
+    as.numeric(weight_dates_join)<=p7  ~ 7,
+    as.numeric(weight_dates_join)<=p8  ~ 8,
+    as.numeric(weight_dates_join)<=p9 ~ 9,
+    as.numeric(weight_dates_join)<=p10  ~ 10,
+    as.numeric(weight_dates_join)<=p11  ~ 11, 
+    as.numeric(weight_dates_join)<=p12  ~ 12,
+    as.numeric(weight_dates_join)<=p13  ~ 13,
+    as.numeric(weight_dates_join)<=p14 ~ 14,
+    as.numeric(weight_dates_join)<=p15  ~ 15,
+    as.numeric(weight_dates_join)<=p16  ~ 16,
+    as.numeric(weight_dates_join)<=prem  ~ 17,
+  )) %>%  ungroup()
+
+
+```
+
+
+
+## Removing same day observations 
+```{r}
+## removing based on outlier periods 
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id, outlier_periods) %>% mutate(mean_research = mean(research_weights, na.rm=TRUE)) %>% ungroup() %>% group_by(participant_id) %>% mutate(mean_research = coalesce(mean_research, NA_real_)) %>% fill(mean_research, .direction="down") %>% ungroup()
+
+data_cohorts_1_2 = data_cohorts_1_2[!is.na(data_cohorts_1_2$outlier_periods), ]
+
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id, study_days) %>% mutate( study_day_single=
+  case_when(
+    (abs(wt_lb-mean_research)) == min(abs(wt_lb-mean_research)) ~ 1,
+    (abs(wt_lb-mean_research)) != min(abs(wt_lb-mean_research)) ~ 0,
+    TRUE~1,
+    )) %>% ungroup()
+data_cohorts_1_2 = data_cohorts_1_2 %>% filter(study_day_single=="1")
+
+
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id, study_days) %>% distinct() %>% ungroup()
+```
+
+
+## 5% for first 8 periods and then 10% for remainder 
+```{r}
+
+data_cohorts_1_2 = data_cohorts_1_2 %>% group_by(participant_id, outlier_periods) %>%  mutate(outliers = case_when(
+  outlier_periods <= 8 & (wt_lb>mean_research*1.05 | wt_lb<mean_research*.95) ~1,
+  outlier_periods <= 8 & (wt_lb<=mean_research*1.05 | wt_lb>=mean_research*.95) ~0,
+  outlier_periods > 8 & (wt_lb>mean_research*1.1 | wt_lb<mean_research*.9) ~1,
+  outlier_periods >8 & (wt_lb<=mean_research*1.1 | wt_lb>=mean_research*.9) ~0,
+  TRUE ~ 0
+)) %>% ungroup() %>% filter(outliers=="0")
+
+```
+
+
+
+
+## Removing outliers from cohort3 based on the outcome dates 
+```{r}
+
+data_cohort3 = daily_drift_data %>% filter(cohort=="3")
+
+# Making outlier  period for daily weights and class weight dates
+
+data_cohort3 = data_cohort3 %>% group_by(participant_id) %>% 
+  mutate(p1=as.numeric(min(weight_dates_join, na.rm = TRUE) + 14)) %>% 
+  mutate(p2=as.numeric(min(weight_dates_join, na.rm = TRUE) + 29)) %>% 
+  mutate(p3=as.numeric(min(weight_dates_join, na.rm = TRUE) + 44)) %>%  
+  mutate(p4=as.numeric(min(weight_dates_join, na.rm = TRUE) + 59)) %>% 
+  mutate(p5=as.numeric(min(weight_dates_join, na.rm = TRUE) + 74)) %>% 
+  mutate(p6=as.numeric(min(weight_dates_join, na.rm = TRUE) + 89)) %>% 
+  mutate(p7=as.numeric(min(weight_dates_join, na.rm = TRUE) + 104)) %>% 
+  mutate(p8=as.numeric(min(weight_dates_join, na.rm = TRUE) + 130)) %>% 
+  mutate(prem=as.numeric(min(weight_dates_join, na.rm = TRUE) + 1000)) %>%
+  ungroup()
+
+## Creating a new variable putting dates into 30 day periods in both weight dates (daily weights data) and class dates (redcap data)
+
+
+data_cohort3 = data_cohort3 %>% group_by(participant_id) %>% mutate(outlier_periods=
+  case_when(
+    as.numeric(weight_dates_join) <=p1 ~ 1,
+    as.numeric(weight_dates_join)<=p2  ~ 2,
+    as.numeric(weight_dates_join)<=p3  ~ 3,
+    as.numeric(weight_dates_join)<=p4  ~ 4,
+    as.numeric(weight_dates_join)<=p5 ~ 5,
+    as.numeric(weight_dates_join)<=p6 ~ 6,
+    as.numeric(weight_dates_join)<=p7  ~ 7,
+    as.numeric(weight_dates_join)<=p8  ~ 8,
+    as.numeric(weight_dates_join)<=prem  ~ 9, 
+  )) %>%  ungroup()
+```
+
+
+
+
+# Removing same day observations 
+```{r}
+data_cohort3 = data_cohort3 %>% group_by(participant_id, outlier_periods) %>% mutate(mean_research = mean(research_weights, na.rm=TRUE)) %>% ungroup() %>% group_by(participant_id) %>% mutate(mean_research = coalesce(mean_research, NA_real_)) %>% fill(mean_research, .direction="down") %>% ungroup()
+
+data_cohort3 = data_cohort3[!is.na(data_cohort3$outlier_periods), ]
+
+data_cohort3 = data_cohort3 %>% group_by(participant_id, study_days) %>% mutate( study_day_single=
+  case_when(
+    (abs(wt_lb-mean_research)) == min(abs(wt_lb-mean_research)) ~ 1,
+    (abs(wt_lb-mean_research)) != min(abs(wt_lb-mean_research)) ~ 0,
+    TRUE~1,
+    )) %>% ungroup()
+data_cohort3 = data_cohort3%>% filter(study_day_single=="1")
+
+
+data_cohort3 = data_cohort3 %>% group_by(participant_id, study_days) %>% distinct() %>% ungroup()
+```
+
+
+
+## 5% for first 7 periods and then 10% for remainder 
+```{r}
+
+data_cohort3 = data_cohort3 %>% group_by(participant_id, outlier_periods) %>%  mutate(outliers = case_when(
+  outlier_periods <= 7 & (wt_lb>mean_research*1.05 | wt_lb<mean_research*.95) ~1,
+  outlier_periods <= 7 & (wt_lb<=mean_research*1.05 | wt_lb>=mean_research*.95) ~0,
+  outlier_periods > 7 & (wt_lb>mean_research*1.1 | wt_lb<mean_research*.9) ~1,
+  outlier_periods > 7  & (wt_lb<=mean_research*1.1 | wt_lb>=mean_research*.9) ~0,
+  TRUE ~ 0
+)) %>% ungroup() %>% filter(outliers=="0")
+
+```
+
+#Rejoining cohorts 1&2 with cohort 3 after removing outliers 
+```{r}
+daily_drift_data_cleaned = full_join(data_cohorts_1_2, data_cohort3)
+
+```
+
+```{r}
+
+
+#removing outliers from AKI-011 based on researcher verification of inaccurate weights
+#aki-011 done
+daily_drift_data_cleaned = daily_drift_data_cleaned %>% mutate(outliers = case_when(
+  participant_id == "AKI-011" & weight_dates== "2019-06-11" ~ 1,
+  participant_id == "AKI-011" & weight_dates== "2019-01-26" ~ 1,
+  participant_id == "AKI-011" & weight_dates== "2019-04-20" ~ 1,
+  participant_id == "AKI-011" & weight_dates== "2019-09-09" ~ 1,
+  participant_id=="AKI-011" & weight_dates!= c("2019-06-11", "2019-01-26", "2019-04-20" ,"2019-09-09")  ~0,
+  participant_id!="AKI-011" ~ 0,
+  TRUE ~ 0,
+)) %>% filter(outliers=="0")
+
+##done
+daily_drift_data_cleaned = daily_drift_data_cleaned %>% mutate(outliers = case_when(
+  participant_id=="LBU-015" & (study_days > 400 & wt_lb > 182) ~ 1,
+  participant_id=="LBU-015" & (study_days > 400 & wt_lb <= 182) ~ 0,
+  participant_id=="LBU-015" & (study_days <= 400) ~ 0,
+  participant_id!="LBU-015" ~ 0,
+  TRUE ~ 0,
+)) %>% filter(outliers=="0")
+
+
+## removed nel-04 removals 
+daily_drift_data_cleaned = daily_drift_data_cleaned %>% mutate(outliers = case_when(
+  participant_id=="NEL-094" & (wt_lb <240) ~ 1,
+  participant_id=="NEL-094" &  (wt_lb >=240) ~ 0,
+  participant_id!="NEL-094" ~ 0,
+  TRUE ~ 0,
+)) %>% filter(outliers=="0")
+
+daily_drift_data_cleaned = daily_drift_data_cleaned %>% mutate(outliers = case_when(
+  participant_id=="PBE-123" & (wt_lb <185) ~ 1,
+  participant_id=="PBE-123" &  (wt_lb >= 185) ~ 0,
+  participant_id!="PBE123" ~ 0,
+  TRUE ~ 0,
+)) %>% filter(outliers=="0")
+
+```
+
+
+# Removing withdrawal participants
+```{r}
+daily_drift_no_withdrawal = daily_drift_data_cleaned %>% filter(withdrawal=="0")
+
+```
+
+# adding in additional variables for Samantha
+
+```{R}
+confounding = data %>% filter(redcap_event_name=="screening_arm_1") %>%  select(participant_id, age, sex, race, race_other, ethnicity, marital_status, ever_pregnant, pregnant_number, last_pregnancy)
+
+daily_weights_for_samantha = left_join(daily_drift_no_withdrawal, confounding)
+
+```
+
+
+
+
