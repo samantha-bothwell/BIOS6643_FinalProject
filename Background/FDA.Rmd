@@ -9,22 +9,15 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## What is Functional Data Analysis (FDA)
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Functional Data Analysis deals with repeated measures over time, whether the time intervals are evenly spaced or sporadic. 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Functional Principal Component Analysis (FPCA)
 
-```{r cars}
-summary(cars)
-```
+Functional data is often high dimensional. FPCA offers a solution to reduce the data dimensions. 
 
-## Including Plots
+## References 
 
-You can also embed plots, for example:
+http://anson.ucdavis.edu/~mueller/Review151106.pdf
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
