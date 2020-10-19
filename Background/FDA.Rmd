@@ -11,13 +11,14 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## What is Functional Data Analysis (FDA)
 
-Functional Data Analysis deals with repeated measures over time, whether the time intervals are evenly spaced or sporadic. 
+Functional Data Analysis deals with repeated measures over time, whether the time intervals are evenly spaced or sporadic. FDA models data through curves or functions [2]. 
 
 ## Functional Principal Component Analysis (FPCA)
 
-Functional data is often high dimensional. FPCA offers a solution to reduce the data dimensions. 
+Functional data is often high dimensional. FPCA offers a solution to reduce the data dimensions [1]. 
 
 ## References 
 
-http://anson.ucdavis.edu/~mueller/Review151106.pdf
+[1] http://anson.ucdavis.edu/~mueller/Review151106.pdf
 
+[2] http://www.psych.mcgill.ca/misc/fda/
