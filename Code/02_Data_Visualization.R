@@ -1,10 +1,14 @@
 #####################################################
 ####             BIOS 6643 Project               ####
 ####        Longitudinal Data Analysis           #### 
-#### Aim : Explain daily weight data through     ####
+#### Aim : Visualize daily weight data through   ####
 ####       Functional Data Analysis              ####
 #####################################################
 
+
+##### Visuals for 
+#####    1. Individuals over time in study 
+#####    2. Individuals over month in study
 
 #### Load in the data 
 wt <- read.csv("D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_with_confounding.csv")
@@ -15,16 +19,3 @@ library(ggplot2)
 
 ggplot(data = wt, aes(x = study_days, y = wt_lb, group = participant_id)) + 
   geom_line()
-
-#### Transform into wide format - use only the weight variable over time 
-library(dplyr)
-library(reshape2)
-library(tidyr)
-wt.wide <- wt %>% 
-  select(wt_lb, study_days) %>% 
-  spread(study_days, wt_lb)
-
-wt.wide <- reshape(wt[,c(3,13,14)], idvar = "participant_id", timevar = "study_days", direction = "wide")
-
-
-#### Summarize the amount of time in study
