@@ -17,5 +17,6 @@ wt <- read.csv("D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProc
 #### Plot data x-axis: study_days, y-axis:  wt_lb, group by: participant_id
 library(ggplot2)
 
-ggplot(data = wt, aes(x = study_days, y = wt_lb, group = participant_id)) + 
+ggplot(data = wt, aes(x = study_days, y = wt_lb, group = participant_id, color = as.factor(cohort))) + 
   geom_line()
+
