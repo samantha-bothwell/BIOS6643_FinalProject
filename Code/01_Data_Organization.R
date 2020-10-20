@@ -40,6 +40,15 @@ co2 <- wt %>%
   group_by(participant_id) %>% 
   filter(Date == max(Date, na.rm = T))
 
+#### Cohort 3
+co3 <- wt %>% 
+  filter(cohort == 3) %>% 
+  mutate(Date = as.Date(weight_dates)) %>% 
+  group_by(participant_id) %>% 
+  filter(Date == max(Date, na.rm = T))
+
+
+
 #### Summarize the amount of time in study
 max.day <- wt %>% 
   group_by(participant_id) %>% 
