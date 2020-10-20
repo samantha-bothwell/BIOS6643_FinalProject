@@ -26,5 +26,21 @@ wt.wide <- wt %>%
 
 wt.wide <- reshape(wt[,c(3,13,14)], idvar = "participant_id", timevar = "study_days", direction = "wide")
 
+#### Cohort 1
+co1 <- wt %>% 
+  filter(cohort == 1) %>% 
+  mutate(Date = as.Date(weight_dates)) %>% 
+  group_by(participant_id) %>% 
+  filter(Date == max(Date, na.rm = T))
+
+#### Cohort 2 
+co2 <- wt %>% 
+  filter(cohort == 2) %>% 
+  mutate(Date = as.Date(weight_dates)) %>% 
+  group_by(participant_id) %>% 
+  filter(Date == max(Date, na.rm = T))
 
 #### Summarize the amount of time in study
+max.day <- wt %>% 
+  group_by(participant_id) %>% 
+  summarise(max.day = max(study_days))
