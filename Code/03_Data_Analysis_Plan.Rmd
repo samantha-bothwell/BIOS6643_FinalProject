@@ -44,12 +44,9 @@ The research questions of interest are :
 
 ## Data Analysis
 
-For this project I am considering two different approaches : 
+For this project I aim to use a Functional Data Analysis approach, a method often utilized for time series data. This would incorporate fitting a curve to the longitudinal data and analyzing its behavior. A benefit to this approach is that it is more flexible to handle irregular, on unequally spaced, data than traditional statistical analyses. 
 
-\begin{itemize}
-  \item A Functional Data Analysis approach - this would incorporate fitting a curve to the longitudinal data and analyzing its behavior. 
-  \item A Spline Model - this would be similar to the FDA approach, however the functions will not smoothed as they are in FDA. 
-\end{itemize}
+Analysis will be performed in R, version 4.0.2.
 
 ## Correlation 
 
@@ -62,7 +59,7 @@ There are many ways the data are correlated.
 
 ## Interesting Data Factors 
 
-When exploring data in the functional data analysis framework, it is ideal to have regular data. Regular data are data where measurements are taken on a consistent data, without gaps. In this dataset, individuals have differing days of data and skip recording on some days. To account for this, I will need to research how to properly handle irregular data for analysis. 
+When analyzing data, it is ideal to have regular data. Regular data are data where measurements are taken on a consistent timeline, without gaps. In this dataset, individuals have differing days of data and skip recording on some days. To account for this, I will need to research how to properly handle irregular data for analysis in the functional framework. FDA incorporates B-spline bases to construct smoothed functions. I will also use this project to analyze the difference between modeling the data with splines and a functional model. 
 
 ## Messy/Unique Data Factors 
 
