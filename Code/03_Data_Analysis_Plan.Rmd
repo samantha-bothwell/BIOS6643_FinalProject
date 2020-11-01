@@ -1,48 +1,57 @@
 ---
-title: "BIOS 6643 Project Data "
-author: "Samantha Bothwell"
-date: "10/30/2020"
-output: pdf_document
+title: "BIOS 6643 Project Data Analysis Plan"
+author: |
+ | Analysts: Samantha Bothwell
+ |
+ | Report generated: `r format(Sys.Date(), '%m/%d/%Y')`
+output:
+  html_document:
+   #  highlight: espresso
+    number_sections: yes
+    theme: yeti
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 ```
 
-## Data Description
+# Data Description
 
 Individuals who classified as overweight or obese were enrolled into the study to understand factors that contribute to weight loss. Participants were asked to step on a bluetooth scale once a day over the course of the study. Within the study, there are 3 cohorts. These cohorts indicate participants who started the study around the same time. 
 
-##### \textit{Cohort 1 (N = 29)}
-\begin{itemize}
-  \item 29 people beginning 04/10/2018 – 07/01/2018 (All but 1 began on in April and May) 
-  \item Ending between 11/14/2018 – 02/20/2020
-  \item Mean study days 546.6 (95\% CI: 324.8, 600.0)
-\end{itemize}
+## *Cohort 1 (N = 29)*
+<ul>
+  <li> 29 people beginning 04/10/2018 – 07/01/2018 (All but 1 began on in April and May) </li>
+  <li> Ending between 11/14/2018 – 02/20/2020 </li>
+  <li> Mean study days 546.6 (95\% CI: 324.8, 600.0) </li>
+</ul>
 
-##### \textit{Cohort 2 (N = 27)}
-\begin{itemize}
-  \item 27 people beginning 02/13/2019 – 09/30/2019 (All but 2 began between 02/13/2020 – 02/16/2020) 
-  \item Ending between 12/22/2019 – 04/20/2020 (All but 2 ended between 04/05/2020 – 04/20/2020)
-  \item Mean study days 412.85 (95\% CI: 233.4, 433.0)
-\end{itemize}
+## *Cohort 2 (N = 27)*
+<ul>
+  <li> 27 people beginning 02/13/2019 – 09/30/2019 (All but 2 began between 02/13/2020 – 02/16/2020) </li>
+  <li> Ending between 12/22/2019 – 04/20/2020 (All but 2 ended between 04/05/2020 – 04/20/2020) </li>
+  <li> Mean study days 412.85 (95\% CI: 233.4, 433.0) </li>
+</ul>
 
-##### \textit{Cohort 3 (N = 37)}
-\begin{itemize}
-  \item 37 people beginning 09/30/2019 – 11/05/2020 
-  \item Ending between 12/02/2019 – 04/20/2020 (All but 2 ended in March or April) 
-  \item Mean study days 178.35 (95\% CI: 79.7, 202.0)
-\end{itemize}
+## *Cohort 3 (N = 37)*
+<ul>
+  <li> 37 people beginning 09/30/2019 – 11/05/2020 </li>
+  <li> Ending between 12/02/2019 – 04/20/2020 (All but 2 ended in March or April) </li>
+  <li> Mean study days 178.35 (95\% CI: 79.7, 202.0) </li>
+</ul>
 
-## Goal 
+# Goal 
 
 The research questions of interest are : 
-\begin{itemize}
-  \item What is the trajectory of weight over the duration of time in the study?    
-  \item Is there a relationship between month of study and weight loss, when accounting for sex and age?
-\end{itemize}
+<ul>
+  <li> What is the trajectory of weight over the duration of time in the study? </li>
+  <li> Is there a relationship between month of study and weight loss, when accounting for sex and age? </li>
+</ul>
 
-## Data Analysis
+# Data Analysis
 
 For this project I aim to use a Functional Data Analysis approach, a method often utilized for time series data. This would incorporate fitting a curve to the longitudinal data and analyzing its behavior. A benefit to this approach is that it is more flexible to handle irregular, on unequally spaced, data than traditional statistical analyses. 
 
@@ -51,11 +60,11 @@ Analysis will be performed in R, version 4.0.2.
 ## Correlation 
 
 There are many ways the data are correlated. 
-\begin{enumerate}
-  \item Recordings by individual 
-  \item Cohort 1 weights were all taken before COVID. Cohorts 2 and 3 had their weights recorded before and during COVID. 
-  \item There may be a correlation based on the month. For example, individuals may be more incentized to lose weight during January because of New Years. Or, warmer months may encourage people to workout than during colder months. 
-\end{enumerate}
+<ul>
+  <li> Recordings by individual </li>
+  <li> Cohort 1 weights were all taken before COVID. Cohorts 2 and 3 had their weights recorded before and during COVID. </li>
+  <li> There may be a correlation based on the month. For example, individuals may be more incentized to lose weight during January because of New Years. Or, warmer months may encourage people to workout than during colder months. </li>
+<ul>
 
 ## Interesting Data Factors 
 
@@ -71,16 +80,65 @@ It may be more meaningful to simply look at month in the study, rather than the 
 
 Based on the spaghetti plot, printed below, the biggest difference between the 3 cohorts is the length of study. Cohort 3 has an average length in study of 178.35 days. Cohort 2 has an average length in study of 412.85 days. Cohort 1 has the longest average length in study of 546.6 days. A reason why cohort may be important is because all the cohorts seem to show a decline in weights from 1 - 200 days. Cohorts 1 and 2 seem to flatten out after 200 days. Cohort 3 does not seem to flatten out due to its short study length. An additonal reason to consider cohort, as mentioned before, is because COVID-19 could confound the weight loss trajectory since stay at home orders could inhibit someone's ability to lose weight. 
 
-```{r}
+```{r, fig.height = 7}
 #### Load in the data 
 wt <- read.csv("D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_with_confounding.csv")
 
 
-#### Plot data x-axis: study_days, y-axis:  wt_lb, group by: participant_id
+#### Plot data x-axis: study_days, y-axis: wt_lb, group by: participant_id
 library(ggplot2)
+library(gridExtra)
 
-ggplot(data = wt, aes(x = study_days, y = wt_lb, group = participant_id, color = as.factor(cohort))) + 
+g1 <- ggplot(data = wt, aes(x = study_days, y = wt_lb, group = participant_id, color = as.factor(cohort))) + 
   geom_line()
+
+
+#### Plot data x-axis: weight_dates, y-axis: wt_lb, group by: participant_id 
+g2 <- ggplot(data = wt, aes(x = as.Date(weight_dates), y = wt_lb, group = participant_id, color = as.factor(cohort))) + 
+  geom_line() 
+
+
+grid.arrange(g1, g2, ncol = 1)
+```
+
+```{r}
+# Get last measurement 
+library(dplyr)
+dem <- wt %>% 
+  group_by(participant_id) %>% 
+  arrange(study_days) %>% 
+  summarize(`Total Measures` = n(), `Time Span` = max(study_days, na.rm = T), Cohort = cohort,
+    `Baseline Weight` = first(na.omit(wt_lb)), Age = age, Sex = sex, Race = race, Ethnicity = ethnicity, 
+    `Marital Status` = marital_status) %>% 
+  slice(1)
+
+# Relevel factors 
+dem$Sex <- as.factor(dem$Sex); dem$Race <- as.factor(dem$Race)
+dem$Ethnicity <- as.factor(dem$Ethnicity); dem$`Marital Status` <- as.factor(dem$`Marital Status`)
+dem$Sex <- recode_factor(dem$Sex, "0" = "Female", "1" = "Male")
+dem$Race <- recode_factor(dem$Race, "1" = "American Indian or Alaska Native", "2" = "Asian", "3" = "Black", 
+  "4" = "Native Hawaiian or other Pacific Islander", "5" = "White", "6" = "Not Reported", "7" = "Other")
+dem$Ethnicity <- recode_factor(dem$Ethnicity, "1" = "Hispanic or Latino", "2" = "Non Hispanic or Latino", 
+  "3" = "Other")
+dem$`Marital Status` <- recode_factor(dem$`Marital Status`, "1" = "Single", "2" = "Committed Relationship", 
+  "3" = "Married", "4" = "Separated", "5" = "Divorced", "6" = "Widowed", "7" = "Not Reported")
+
+# table 1 by cohort 
+library(table1)
+
+# Format table
+my.render.cont <- function(x) {
+    with(stats.apply.rounding(stats.default(x), digits=2), c("",
+        "Mean (95% CI)"=sprintf("%s (%s, %s)", 
+        MEAN, round(quantile(x, 0.025, na.rm = T),2), round(quantile(x, 0.975, na.rm = T),2))))
+}
+
+dem$Cohort <- as.factor(dem$Cohort)
+# make table 
+tb1 <- table1(~ `Age` + `Sex` + `Race` + `Ethnicity` + `Marital Status` + 
+              `Baseline Weight` + `Total Measures` + `Time Span` |`Cohort`,
+              data = dem, render.continuous = my.render.cont, droplevels=F)
+tb1
 ```
 
 
