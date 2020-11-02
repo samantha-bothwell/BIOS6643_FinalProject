@@ -26,21 +26,18 @@ Individuals who classified as overweight or obese were enrolled into the study t
 <ul>
   <li> 29 people beginning 04/10/2018 – 07/01/2018 (All but 1 began on in April and May) </li>
   <li> Ending between 11/14/2018 – 02/20/2020 </li>
-  <li> Mean study days 546.6 (95\% CI: 324.8, 600.0) </li>
 </ul>
 
-## *Cohort 2 (N = 27)*
+## *Cohort 2 (N = 26)*
 <ul>
-  <li> 27 people beginning 02/13/2019 – 09/30/2019 (All but 2 began between 02/13/2020 – 02/16/2020) </li>
+  <li> 26 people beginning 02/13/2019 – 09/30/2019 (All but 2 began between 02/13/2020 – 02/16/2020) </li>
   <li> Ending between 12/22/2019 – 04/20/2020 (All but 2 ended between 04/05/2020 – 04/20/2020) </li>
-  <li> Mean study days 412.85 (95\% CI: 233.4, 433.0) </li>
 </ul>
 
-## *Cohort 3 (N = 37)*
+## *Cohort 3 (N = 36)*
 <ul>
-  <li> 37 people beginning 09/30/2019 – 11/05/2020 </li>
+  <li> 36 people beginning 09/30/2019 – 11/05/2020 </li>
   <li> Ending between 12/02/2019 – 04/20/2020 (All but 2 ended in March or April) </li>
-  <li> Mean study days 178.35 (95\% CI: 79.7, 202.0) </li>
 </ul>
 
 # Goal 
