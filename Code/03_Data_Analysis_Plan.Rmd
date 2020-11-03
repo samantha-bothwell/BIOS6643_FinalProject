@@ -73,7 +73,7 @@ Cohorts were grouped by start date as well as length of time in the study. Both 
 It may be more meaningful to simply look at month in the study, rather than the cohort groupings. This is something I plan to investigate further. 
 
 
-## Preliminary Analysis 
+# Preliminary Analysis 
 
 Based on the spaghetti plot, printed below, the biggest difference between the 3 cohorts is the length of study. Cohort 3 has an average length in study of 178.35 days. Cohort 2 has an average length in study of 412.85 days. Cohort 1 has the longest average length in study of 546.6 days. A reason why cohort may be important is because all the cohorts seem to show a decline in weights from 1 - 200 days. Cohorts 1 and 2 seem to flatten out after 200 days. Cohort 3 does not seem to flatten out due to its short study length. An additonal reason to consider cohort, as mentioned before, is because COVID-19 could confound the weight loss trajectory since stay at home orders could inhibit someone's ability to lose weight. 
 
