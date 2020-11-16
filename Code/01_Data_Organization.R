@@ -62,7 +62,7 @@ max.day <- wt %>%
 
 #### Clean data 
 # Keep only important variables 
-wt <- wt[,c(3,4,10,12,14,55:57)]
+wt <- wt[,c(3,4,10,13,14,55:57)]
 
 # Add missing data 
 library(dplyr)
