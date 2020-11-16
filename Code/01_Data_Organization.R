@@ -53,3 +53,40 @@ co3 <- wt %>%
 max.day <- wt %>% 
   group_by(participant_id) %>% 
   summarise(max.day = max(study_days))
+
+
+
+
+
+
+
+#### Clean data 
+# Keep only important variables 
+wt <- wt[,c(3,4,10,12,14,55:57)]
+
+# Add missing data 
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+wt <- wt %>% 
+  group_by(participant_id) %>%  
+  mutate(weight_dates = as.Date(weight_dates)) %>%
+  complete(weight_dates = seq.Date(min(weight_dates, na.rm = T), 
+           max(weight_dates, na.rm = T), by="day")) %>% 
+  mutate(cohort = min(cohort, na.rm = T), sex = min(sex, na.rm = T), race = min(race, na.rm = T),
+    Day1 = min(as.Date(weight_dates), na.rm = T))
+
+wt$study_days <- wt$weight_dates - wt$Day1 + 1
+
+
+# Add season variable 
+wt$month <- str_split_fixed(wt$weight_dates, "-", 3)[,2]
+wt$month <- as.numeric(wt$month)
+
+wt$season <- ifelse(wt$month %in% c(12, 1, 2), "Winter", 
+             ifelse(wt$month %in% c(3, 4, 5), "Spring", 
+             ifelse(wt$month %in% c(6, 7, 8), "Summer", "Autumn")))
+
+write.csv(wt, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean.csv")
+
