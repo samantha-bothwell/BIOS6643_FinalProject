@@ -4,14 +4,7 @@ author: |
  | Analysts: Samantha Bothwell
  |
  | Report generated: `r format(Sys.Date(), '%m/%d/%Y')`
-output:
-  html_document:
-   #  highlight: espresso
-    number_sections: yes
-    theme: yeti
-    toc: yes
-    toc_depth: 2
-    toc_float: yes
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
