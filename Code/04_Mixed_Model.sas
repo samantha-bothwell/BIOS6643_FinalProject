@@ -15,7 +15,7 @@ RUN;
 
 ** Model **; 
 PROC MIXED DATA = wt; 
-	CLASS participant_id cohort sex race season month; 
-	MODEL wt_lb = cohort sex age race study_days season month / solution;
-	REPEATED cohort / subject=participant_id type=ar(1);
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = cohort sex age race study_days month / solution;
+	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN;  

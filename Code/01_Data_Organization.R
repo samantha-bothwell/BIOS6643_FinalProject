@@ -88,5 +88,10 @@ wt$season <- ifelse(wt$month %in% c(12, 1, 2), "Winter",
              ifelse(wt$month %in% c(3, 4, 5), "Spring", 
              ifelse(wt$month %in% c(6, 7, 8), "Summer", "Autumn")))
 
+# Truncate cohort times to a year 
+wt <- wt[wt$study_days <= 365 ,]
+wt <- wt[!(is.na(wt$participant_id)),]
+wt <- wt[!duplicated(wt[,c(1,2)]),]
+
 write.csv(wt, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean.csv")
 
