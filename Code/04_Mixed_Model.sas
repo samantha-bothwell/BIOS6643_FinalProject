@@ -10,8 +10,6 @@ PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/
 	DBMS = csv; 
 RUN;
 
-PROC PRINT DATA = wt; 
-RUN; 
 
 ** Models **;
 /* AIC = 97794.7 */
@@ -36,8 +34,8 @@ PROC MIXED DATA = wt ;
 RUN;
 
 /* AIC = 60749.4 */
-PROC MIXED DATA = wt ; 
-	CLASS participant_id cohort sex race(ref = "5") month sex; 
+PROC MIXED DATA = wt plots(MAXPOINTS=none)=ALL; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
 	MODEL wt_lb = cohort sex race study_days month / solution ;
 	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN;   
