@@ -13,9 +13,31 @@ RUN;
 PROC PRINT DATA = wt; 
 RUN; 
 
-** Model **; 
-PROC MIXED DATA = wt; 
+** Models **;
+/* AIC = 97794.7 */
+PROC MIXED DATA = wt ; 
 	CLASS participant_id cohort sex race(ref = "5") month; 
 	MODEL wt_lb = cohort sex age race study_days month / solution;
-	REPEATED / SUBJECT = participant_id type=ar(1);
+	RANDOM intercept / SUBJECT = participant_id(cohort) type=ar(1);
 RUN;  
+ 
+/* AIC = 61608.7 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = sex age race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id(cohort) type=ar(1);
+RUN;  
+
+/* AIC = 61590.6 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = cohort sex age race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN;
+
+/* AIC = 60749.4 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month sex; 
+	MODEL wt_lb = cohort sex race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN;   
