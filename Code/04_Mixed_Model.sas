@@ -12,6 +12,15 @@ RUN;
 
 
 ** Models **;
+/* AIC = 60727.9 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month age; 
+	MODEL wt_lb = cohort sex age race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN;
+
+
+
 /* AIC = 97794.7 */
 PROC MIXED DATA = wt ; 
 	CLASS participant_id cohort sex race(ref = "5") month; 
@@ -34,8 +43,23 @@ PROC MIXED DATA = wt ;
 RUN;
 
 /* AIC = 60749.4 */
-PROC MIXED DATA = wt plots(MAXPOINTS=none)=ALL; 
+PROC MIXED DATA = wt; * plots(MAXPOINTS=none)=ALL; 
 	CLASS participant_id cohort sex race(ref = "5") month; 
 	MODEL wt_lb = cohort sex race study_days month / solution ;
 	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN;   
+
+DATA wt; 
+	SET wt; 
+	age_sq = age*age; 
+RUN; 
+
+PROC PRINT DATA = wt; 
+RUN; 
+
+/* AIC = 61595.0 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = cohort sex age age_sq race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN;

@@ -93,5 +93,9 @@ wt <- wt[wt$study_days <= 365 ,]
 wt <- wt[!(is.na(wt$participant_id)),]
 wt <- wt[!duplicated(wt[,c(1,2)]),]
 
+wt$age <- ifelse(wt$age <= 30, "20-30", 
+  ifelse(wt$age <= 40, "30-40", 
+    ifelse(wt$age <= 50, "40-50", "50-60")))
+
 write.csv(wt, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean.csv")
 
