@@ -93,6 +93,12 @@ wt <- wt[wt$study_days <= 365 ,]
 wt <- wt[!(is.na(wt$participant_id)),]
 wt <- wt[!duplicated(wt[,c(1,2)]),]
 
+
+# Adjust age so it changes daily
+wt$age <- wt$age + (wt$study_days - 1)*(1/365)
+  
+  
+
 wt$age <- ifelse(wt$age <= 30, "20-30", 
   ifelse(wt$age <= 40, "30-40", 
     ifelse(wt$age <= 50, "40-50", "50-60")))

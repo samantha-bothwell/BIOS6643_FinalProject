@@ -119,6 +119,27 @@ dem$`Marital Status` <- recode_factor(dem$`Marital Status`, "1" = "Single", "2" 
 # table 1 by cohort 
 library(table1)
 
+dem$Cohort <- factor(dem$Cohort,
+    levels = c(1,2,3,4), 
+    labels = c("Cohort 1", "Cohort 2", "Cohort 3", "P-Value"))
+
+# Format table
+rndr <- function(x, name, ...) {
+    if (length(x) == 0) {
+        y <- dem[[name]]
+        s <- rep("", length(render.default(x=y, name=name, ...)))
+        if (is.numeric(y)) {
+            p <- kruskal.test(y ~ dem$Cohort)$p.value
+        } else {
+            p <- chisq.test(table(y, droplevels(dem$Cohort)))$p.value
+        }
+        s[2] <- sub("<", "&lt;", format.pval(p, digits=3, eps=0.001))
+        s
+    } else {
+        render.default(x=x, name=name, ...)
+    }
+}
+
 # Format table
 my.render.cont <- function(x) {
     with(stats.apply.rounding(stats.default(x), digits=2), c("",
@@ -126,11 +147,12 @@ my.render.cont <- function(x) {
         MEAN, round(quantile(x, 0.025, na.rm = T),2), round(quantile(x, 0.975, na.rm = T),2))))
 }
 
-dem$Cohort <- as.factor(dem$Cohort)
+dem <- dem[!(dem$participant_id == "KBU-082"),]
+
 # make table 
 tb1 <- table1(~ `Age` + `Sex` + `Race` + `Ethnicity` + `Marital Status` + 
               `Baseline Weight` + `Total Measures` + `Time Span` |`Cohort`,
-              data = dem, render.continuous = my.render.cont, droplevels=F)
+              data = dem, render=rndr, render.continuous = my.render.cont, droplevels=F, overall = F)
 tb1
 ```
 

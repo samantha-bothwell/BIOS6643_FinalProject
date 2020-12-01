@@ -15,12 +15,12 @@ PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/
 	DBMS = csv; 
 RUN;
 
-PROC PRINT DATA = wt_cat; 
+PROC PRINT DATA = wt; 
 RUN; 
 
 ** Models **;
 /* AIC = 60727.9 */
-PROC MIXED DATA = wt_cat ; 
+PROC MIXED DATA = wt_cat; 
 	CLASS participant_id cohort sex race(ref = "5") month age; 
 	MODEL wt_lb = cohort sex age race study_days month / solution ;
 	REPEATED / SUBJECT = participant_id type=ar(1);
