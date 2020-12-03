@@ -10,6 +10,11 @@ PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/
 	DBMS = csv; 
 RUN;
 
+PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_blage.csv"
+	OUT = wt_bl
+	DBMS = csv; 
+RUN;
+
 PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_cat_clean.csv"
 	OUT = wt_cat
 	DBMS = csv; 
@@ -18,43 +23,64 @@ RUN;
 PROC PRINT DATA = wt; 
 RUN; 
 
+DATA wt_cat; 
+	SET wt_cat; 
+	study_days = study_days/365; 
+RUN; 
+
 ** Models **;
-/* AIC = 60727.9 */
+/* When treating baseline age as categorical we have the lowest model AIC */
+/* AIC = 60727.9, OBS Used 15452 */
 PROC MIXED DATA = wt_cat; 
-	CLASS participant_id cohort sex race(ref = "5") month age; 
-	MODEL wt_lb = cohort sex age race study_days month / solution ;
+	CLASS participant_id cohort sex race(ref = "5") age; 
+	MODEL wt_lb = cohort sex age race study_days study_days*study_days / solution outp = pred;
+	RANDOM INTERCEPT / SUBJECT = participant_id; 
+	RANDOM study_days / SUBJECT = participant_id;
+	RANDOM study_days*study_days / SUBJECT = participant_id;  
 	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN;
 
 
+/* Best model ignoring age */
+/* AIC = 60749.4, OBS Used 15452 */
+PROC MIXED DATA = wt_bl; * plots(MAXPOINTS=none)=ALL; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = cohort sex race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN; 
 
-/* AIC = 97794.7 */
+
+/* Best model treating age as continuous*/
+/* AIC = 61590.6, OBS Used 15452 */
 PROC MIXED DATA = wt ; 
 	CLASS participant_id cohort sex race(ref = "5") month; 
-	MODEL wt_lb = cohort sex age race study_days month / solution;
-	RANDOM intercept / SUBJECT = participant_id(cohort) type=ar(1);
-RUN;  
- 
+	MODEL wt_impute = cohort sex age race study_days month / solution ;
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN; 
+
+PROC PRINT DATA = wt; 
+RUN; 
+*********
+When we use a daily updated age, 
+	AGE ESTIMATE = -0.4817, AGE PVAL = 0.1810
+	STUDY DAYS ESTIMATE = 0.008981, STUDY DAYS PVAL = 0.0550
+When we use baseline age, 
+	AGE ESTIMATE = -0.4817, AGE PVAL = 0.1847
+	STUDY DAYS ESTIMATE = 0.007661, STUDY DAYS PVAL = 0.0943
+*********; 
+
+
+
+
+
+
 /* AIC = 61608.7 */
 PROC MIXED DATA = wt ; 
 	CLASS participant_id cohort sex race(ref = "5") month; 
 	MODEL wt_lb = sex age race study_days month / solution ;
 	REPEATED / SUBJECT = participant_id(cohort) type=ar(1);
 RUN;  
-
-/* AIC = 61590.6 */
-PROC MIXED DATA = wt ; 
-	CLASS participant_id cohort sex race(ref = "5") month; 
-	MODEL wt_lb = cohort sex age race study_days month / solution ;
-	REPEATED / SUBJECT = participant_id type=ar(1);
-RUN;
-
-/* AIC = 60749.4 */
-PROC MIXED DATA = wt; * plots(MAXPOINTS=none)=ALL; 
-	CLASS participant_id cohort sex race(ref = "5") month; 
-	MODEL wt_lb = cohort sex race study_days month / solution ;
-	REPEATED / SUBJECT = participant_id type=ar(1);
-RUN;   
+ 
 
 DATA wt; 
 	SET wt; 
@@ -70,3 +96,57 @@ PROC MIXED DATA = wt ;
 	MODEL wt_lb = cohort sex age age_sq race study_days month / solution ;
 	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN;
+
+
+/* Baseline age AIC = 97794.7, Updated age AIC = 97794.7 */
+PROC MIXED DATA = wt ; 
+	CLASS participant_id cohort sex race(ref = "5") month; 
+	MODEL wt_lb = cohort sex age race study_days month / solution;
+	RANDOM intercept / SUBJECT = participant_id(cohort) type=ar(1);
+RUN; 
+
+
+PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk.csv"
+	OUT = wt_week
+	DBMS = csv; 
+RUN;
+PROC CONTENTS DATA = wt_week; 
+RUN; 
+
+PROC MIXED DATA = wt_week ; 
+	CLASS participant_id cohort sex race(ref = "5"); 
+	MODEL mean_wt = cohort sex age race Week Week*Week / solution outp = pred1;
+	RANDOM INTERCEPT / subject = participant_id; 
+	RANDOM Week / subject = participant_id;  
+/*	RANDOM month / subject = participant_id; */
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN; 
+
+PROC PRINT DATA = pred; 
+RUN; 
+
+/* 13211.4 */
+
+PROC SGPLOT DATA = pred1; 
+   title 'Predicted Weights over Study Weeks';
+   series x=Week y=pred / group=participant_id;
+run;
+
+
+
+PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk_cat.csv"
+	OUT = wt_cat_week
+	DBMS = csv; 
+RUN;
+
+PROC PRINT DATA = wt_cat_week; 
+RUN;
+
+PROC MIXED DATA = wt_cat_week ; 
+	CLASS participant_id cohort sex race(ref = "5") age; 
+	MODEL mean_wt = cohort sex age race Week Week*Week / solution outp = pred;
+	RANDOM INTERCEPT / subject = participant_id; 
+/*	RANDOM Week / subject = participant_id;  */
+/*	RANDOM month / subject = participant_id; */
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN; 

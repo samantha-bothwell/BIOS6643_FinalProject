@@ -76,6 +76,7 @@ Based on the spaghetti plot, printed below, the biggest difference between the 3
 ```{r, fig.height = 7}
 #### Load in the data 
 wt <- read.csv("D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_with_confounding.csv")
+wt2 <- read.csv("D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk.csv")
 
 
 #### Plot data x-axis: study_days, y-axis: wt_lb, group by: participant_id
@@ -116,6 +117,8 @@ dem$Ethnicity <- recode_factor(dem$Ethnicity, "1" = "Hispanic or Latino", "2" = 
 dem$`Marital Status` <- recode_factor(dem$`Marital Status`, "1" = "Single", "2" = "Committed Relationship", 
   "3" = "Married", "4" = "Separated", "5" = "Divorced", "6" = "Widowed", "7" = "Not Reported")
 
+dem <- dem[dem$participant_id %in% wt2$participant_id,]
+
 # table 1 by cohort 
 library(table1)
 
@@ -150,8 +153,8 @@ my.render.cont <- function(x) {
 dem <- dem[!(dem$participant_id == "KBU-082"),]
 
 # make table 
-tb1 <- table1(~ `Age` + `Sex` + `Race` + `Ethnicity` + `Marital Status` + 
-              `Baseline Weight` + `Total Measures` + `Time Span` |`Cohort`,
+tb1 <- table1(~ `Age` + `Sex` + `Race` + `Ethnicity` + 
+              `Baseline Weight` + `Time Span` |`Cohort`,
               data = dem, render=rndr, render.continuous = my.render.cont, droplevels=F, overall = F)
 tb1
 ```
