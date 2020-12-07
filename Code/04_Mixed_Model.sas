@@ -113,9 +113,26 @@ RUN;
 PROC CONTENTS DATA = wt_week; 
 RUN; 
 
+DATA wt_week; 
+	SET wt_week; 
+	weight_change = mean_wt - weight_bs; 
+RUN; 
+
+
+/* 13162.9 */
 PROC MIXED DATA = wt_week ; 
 	CLASS participant_id cohort sex race(ref = "5"); 
-	MODEL mean_wt = cohort sex age race Week Week*Week / solution outp = pred1;
+	MODEL weight_change = cohort sex age race Week Week*Week cohort*Week / solution outp = pred1;
+	RANDOM INTERCEPT / subject = participant_id; 
+	RANDOM Week / subject = participant_id;  
+/*	RANDOM month / subject = participant_id; */
+	REPEATED / SUBJECT = participant_id type=ar(1);
+RUN; 
+
+/* 13160.2 */
+PROC MIXED DATA = wt_week ; 
+	CLASS participant_id cohort sex race(ref = "5"); 
+	MODEL mean_wt = weight_bs cohort sex age race Week Week*Week / solution outp = pred2;
 	RANDOM INTERCEPT / subject = participant_id; 
 	RANDOM Week / subject = participant_id;  
 /*	RANDOM month / subject = participant_id; */
@@ -125,7 +142,7 @@ RUN;
 PROC PRINT DATA = pred; 
 RUN; 
 
-/* 13211.4 */
+/* 13162.9 */
 
 PROC SGPLOT DATA = pred1; 
    title 'Predicted Weights over Study Weeks';

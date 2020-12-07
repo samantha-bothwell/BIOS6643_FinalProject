@@ -155,7 +155,7 @@ dem <- dem[!(dem$participant_id == "KBU-082"),]
 # make table 
 tb1 <- table1(~ `Age` + `Sex` + `Race` + `Ethnicity` + 
               `Baseline Weight` + `Time Span` |`Cohort`,
-              data = dem, render=rndr, render.continuous = my.render.cont, droplevels=F, overall = F)
+              data = dem, render=rndr, droplevels=F, overall = F)
 tb1
 ```
 

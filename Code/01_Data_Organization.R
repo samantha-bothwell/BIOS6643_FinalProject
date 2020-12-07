@@ -174,5 +174,5 @@ weight.bs <- wt %>% group_by(participant_id) %>%
 wt.week$weight.bs <- weight.bs$wt_lb[match(wt.week$participant_id, weight.bs$participant_id)]
 
 
-write.csv(wt.week, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk_cat.csv")
+write.csv(wt.week, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk.csv")
 
