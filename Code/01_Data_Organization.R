@@ -146,7 +146,7 @@ wt.week$season <- ifelse(wt.week$month %in% c(12, 1, 2), "Winter",
 miss <- wt.week %>% 
   group_by(participant_id) %>% 
   summarise(missing = sum(is.na(mean.wt))/n()) %>% 
-  filter(missing > 0.5)
+  filter(missing > 0.8)
 
 # remove people with a lot missing 
 wt.week <- wt.week[!(wt.week$participant_id %in% miss$participant_id),]
@@ -167,6 +167,11 @@ ggplot(data = wt[!(wt$cohort == 3),], aes(x = study_days, y = wt_lb, group = par
  geom_line(aes(col = age)) + 
   stat_summary(fun.y=mean,geom="line",lwd = 1.5,aes(group=age, col = age))
 
+
+# Add baseline weight 
+weight.bs <- wt %>% group_by(participant_id) %>% 
+  filter(study_days == 1)
+wt.week$weight.bs <- weight.bs$wt_lb[match(wt.week$participant_id, weight.bs$participant_id)]
 
 
 write.csv(wt.week, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk_cat.csv")
