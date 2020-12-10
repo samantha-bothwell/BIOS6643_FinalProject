@@ -128,9 +128,11 @@ library(lubridate)
 wt.week <- wt %>% 
   group_by(participant_id, Week.date = floor_date(weight_dates, unit="week")) %>% 
   summarise(mean.wt = mean(wt_lb, na.rm = T), cohort = min(cohort, na.rm = T), sex = min(sex, na.rm = T), 
-    race = min(race, na.rm = T), age = min(age, na.rm = T)) %>% 
+    race = min(race, na.rm = T), age = min(age, na.rm = T), num.days = sum(!is.na(wt_lb))) %>% 
   summarise(Week = as.numeric(Week.date - min(Week.date))/7 + 1, cohort = min(cohort, na.rm = T), sex = min(sex, na.rm = T), 
-    race = min(race, na.rm = T), age = min(age, na.rm = T), mean.wt = mean.wt, Week.date = Week.date)
+    race = min(race, na.rm = T), age = min(age, na.rm = T), mean.wt = mean.wt, Week.date = Week.date, num.days = num.days)
+
+
 
 wt.week$mean.wt <- ifelse(wt.week$mean.wt == "NaN", NA, wt.week$mean.wt)
 
@@ -146,7 +148,7 @@ wt.week$season <- ifelse(wt.week$month %in% c(12, 1, 2), "Winter",
 miss <- wt.week %>% 
   group_by(participant_id) %>% 
   summarise(missing = sum(is.na(mean.wt))/n()) %>% 
-  filter(missing > 0.8)
+  filter(missing >= 0.8)
 
 # remove people with a lot missing 
 wt.week <- wt.week[!(wt.week$participant_id %in% miss$participant_id),]
@@ -158,14 +160,10 @@ wt.week$age <- wt.week$age + (wt.week$Week - 1)*(7/365)
   
   
 
-wt.week$age <- ifelse(wt.week$age <= 30, "20-30", 
-  ifelse(wt.week$age <= 40, "30-40", 
-    ifelse(wt.week$age <= 50, "40-50", "50-60")))
-
-wt$study_days <- as.numeric(wt$study_days)
-ggplot(data = wt[!(wt$cohort == 3),], aes(x = study_days, y = wt_lb, group = participant_id)) + 
- geom_line(aes(col = age)) + 
-  stat_summary(fun.y=mean,geom="line",lwd = 1.5,aes(group=age, col = age))
+# If we wanted categorical age
+# wt.week$age <- ifelse(wt.week$age <= 30, "20-30", 
+#   ifelse(wt.week$age <= 40, "30-40", 
+#     ifelse(wt.week$age <= 50, "40-50", "50-60")))
 
 
 # Add baseline weight 
@@ -175,4 +173,14 @@ wt.week$weight.bs <- weight.bs$wt_lb[match(wt.week$participant_id, weight.bs$par
 
 
 write.csv(wt.week, "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk.csv")
+
+
+# Missing Data summary
+explanatory = c("cohort", "sex", "race", "age") 
+dependent = "mean.wt"
+
+wt.week %>% missing_compare(dependent, explanatory)
+
+
+
 

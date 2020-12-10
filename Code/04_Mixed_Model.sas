@@ -119,37 +119,33 @@ DATA wt_week;
 RUN; 
 
 
-/* 13162.9 */
+/* 13130.5 */
 PROC MIXED DATA = wt_week ; 
 	CLASS participant_id cohort sex race(ref = "5"); 
 	MODEL weight_change = cohort sex age race Week Week*Week cohort*Week / solution outp = pred1;
-	RANDOM INTERCEPT / subject = participant_id; 
-	RANDOM Week / subject = participant_id;  
-/*	RANDOM month / subject = participant_id; */
+	RANDOM intercept Week Week*Week / subject = participant_id;  
 	REPEATED / SUBJECT = participant_id type=ar(1);
+	WEIGHT num_days;
 RUN; 
 
-/* 13160.2 */
+/* 13101.4 */
+/* Lower AIC but does not account for week weight */
 PROC MIXED DATA = wt_week ; 
 	CLASS participant_id cohort sex race(ref = "5"); 
-	MODEL mean_wt = weight_bs cohort sex age race Week Week*Week / solution outp = pred2;
-	RANDOM INTERCEPT / subject = participant_id; 
-	RANDOM Week / subject = participant_id;  
-/*	RANDOM month / subject = participant_id; */
+	MODEL weight_change = cohort sex age race Week Week*Week cohort*Week / solution outp = pred2;
+	RANDOM intercept Week Week*Week / subject = participant_id;  
 	REPEATED / SUBJECT = participant_id type=ar(1);
 RUN; 
 
-PROC PRINT DATA = pred; 
-RUN; 
-
-/* 13162.9 */
 
 PROC SGPLOT DATA = pred1; 
-   title 'Predicted Weights over Study Weeks';
+   title 'Predicted Weight Change over Study Weeks';
    series x=Week y=pred / group=participant_id;
 run;
-
-
+PROC SGPLOT DATA = pred1; 
+   title 'Actual Weight Change over Study Weeks';
+   series x=Week y=weight_change / group=participant_id;
+run;
 
 PROC IMPORT DATAFILE = "D:/CU/Fall 2020/BIOS 6643/Project/BIOS6643_FinalProject/DataProcessed/daily_weights_clean_wk_cat.csv"
 	OUT = wt_cat_week
