@@ -4,6 +4,7 @@ Individuals who classified as overweight or obese were enrolled into the study t
 
 The research questions of interest are : 
       
-•	What is the trajectory of weight over the duration of time in the study?
-•	Is there a significant decrease in weight over the course of the study, regardless of intervention group? 
+-	What is the trajectory of weight over the duration of time in the study?   
+
+-	Is there a significant decrease in weight over the course of the study, regardless of intervention group? 
 
